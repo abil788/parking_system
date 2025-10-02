@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Dashboard</h2>
+<p>Welcome to the Parking System Dashboard.</p>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Cards</h5>
+                <p class="card-text">{{ total_cards }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Readers</h5>
+                <p class="card-text">{{ total_readers }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Total Logs</h5>
+                <p class="card-text">{{ total_logs }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
