@@ -1,0 +1,20 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# Database
+SQLAlchemy==2.0.34
+psycopg2-binary
+
+# Migrations
+alembic==1.13.2
+
+# Authentication & Security
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+python-multipart==0.0.9
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Templates (Jinja2 for HTML rendering)
+Jinja2==3.1.4
