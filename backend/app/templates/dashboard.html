@@ -1,33 +1,118 @@
 {% extends "base.html" %}
 
-{% block content %}
-<h2>Dashboard</h2>
-<p>Welcome to the Parking System Dashboard.</p>
+{% block title %}Dashboard - Parking System{% endblock %}
 
-<div class="row">
-    <div class="col-md-4">
-        <div class="card text-bg-primary mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Total Cards</h5>
-                <p class="card-text">{{ total_cards }}</p>
-            </div>
+{% block content %}
+<div>
+    <h1 class="text-3xl font-bold mb-8">Dashboard</h1>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-gray-500 text-sm font-semibold mb-2">Total Cards</h3>
+            <p class="text-3xl font-bold" id="total-cards">0</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-gray-500 text-sm font-semibold mb-2">Active Cards</h3>
+            <p class="text-3xl font-bold text-green-600" id="active-cards">0</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-gray-500 text-sm font-semibold mb-2">Today's Entries</h3>
+            <p class="text-3xl font-bold text-blue-600" id="today-entries">0</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-gray-500 text-sm font-semibold mb-2">Access Denied</h3>
+            <p class="text-3xl font-bold text-red-600" id="denied-access">0</p>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card text-bg-success mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Total Readers</h5>
-                <p class="card-text">{{ total_readers }}</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-bg-warning mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Total Logs</h5>
-                <p class="card-text">{{ total_logs }}</p>
-            </div>
+
+    <!-- Recent Access Logs -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-xl font-bold mb-4">Recent Access Logs</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="border-b">
+                        <th class="text-left py-2">Time</th>
+                        <th class="text-left py-2">Card UID</th>
+                        <th class="text-left py-2">Owner</th>
+                        <th class="text-left py-2">Vehicle</th>
+                        <th class="text-left py-2">Location</th>
+                        <th class="text-left py-2">Action</th>
+                        <th class="text-left py-2">Result</th>
+                    </tr>
+                </thead>
+                <tbody id="recent-logs">
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-gray-500">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+
+<script>
+    async function loadDashboardData() {
+        try {
+            // Load cards stats
+            const cardsResponse = await apiRequest('/cards?page=1&page_size=1');
+            const cardsData = await cardsResponse.json();
+            document.getElementById('total-cards').textContent = cardsData.total;
+
+            // Load active cards
+            const activeResponse = await apiRequest('/cards?status=active&page=1&page_size=1');
+            const activeData = await activeResponse.json();
+            document.getElementById('active-cards').textContent = activeData.total;
+
+            // Load today's logs
+            const today = new Date().toISOString().split('T')[0];
+            const logsResponse = await apiRequest(`/logs?start_date=${today}&page=1&page_size=10`);
+            const logsData = await logsResponse.json();
+
+            // Count entries and denied
+            let entries = 0, denied = 0;
+            logsData.logs.forEach(log => {
+                if (log.action === 'enter') entries++;
+                if (log.result === 'denied') denied++;
+            });
+
+            document.getElementById('today-entries').textContent = entries;
+            document.getElementById('denied-access').textContent = denied;
+
+            // Display recent logs
+            const tbody = document.getElementById('recent-logs');
+            if (logsData.logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-gray-500">No recent logs</td></tr>';
+            } else {
+                tbody.innerHTML = logsData.logs.map(log => `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-2">${new Date(log.timestamp).toLocaleString()}</td>
+                        <td class="py-2">${log.card_uid || 'N/A'}</td>
+                        <td class="py-2">${log.owner_name || 'N/A'}</td>
+                        <td class="py-2">${log.vehicle_plate || 'N/A'}</td>
+                        <td class="py-2">${log.reader_location || 'N/A'}</td>
+                        <td class="py-2">
+                            <span class="px-2 py-1 text-xs rounded ${log.action === 'enter' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
+                                ${log.action}
+                            </span>
+                        </td>
+                        <td class="py-2">
+                            <span class="px-2 py-1 text-xs rounded ${log.result === 'granted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${log.result}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        } catch (error) {
+            console.error('Error loading dashboard:', error);
+        }
+    }
+
+    loadDashboardData();
+    
+    // Refresh every 30 seconds
+    setInterval(loadDashboardData, 30000);
+</script>
 {% endblock %}

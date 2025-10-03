@@ -1,18 +1,21 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from .config import settings
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from .config import get_settings
 
-# Create database engine
-engine = create_engine(settings.DATABASE_URL, echo=True)
+settings = get_settings()
 
-# SessionLocal = database session
+engine = create_engine(
+    settings.DATABASE_URL,  # Kembalikan ke DATABASE_URL (uppercase)
+    pool_pre_ping=True,
+    echo=settings.DEBUG
+)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Base model untuk inheritance
 Base = declarative_base()
 
 
-# Dependency untuk FastAPI
 def get_db():
     db = SessionLocal()
     try:

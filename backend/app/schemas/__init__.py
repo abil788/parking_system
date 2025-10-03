@@ -1,11 +1,11 @@
-from .card import CardBase, CardCreate, CardResponse
-from .reader import ReaderBase, ReaderCreate, ReaderResponse
-from .access_log import AccessLogBase, AccessLogCreate, AccessLogResponse
-from .auth import Token, TokenData, UserLogin, UserResponse
+from .card import CardBase, CardCreate, CardUpdate, CardResponse, CardListResponse
+from .reader import ReaderBase, ReaderCreate, ReaderUpdate, ReaderResponse, ReaderEventRequest, ReaderEventResponse
+from .access_log import AccessLogResponse, AccessLogListResponse
+from .auth import UserLogin, UserRegister, UserResponse, Token, TokenData
 
 __all__ = [
-    "CardBase", "CardCreate", "CardResponse",
-    "ReaderBase", "ReaderCreate", "ReaderResponse",
-    "AccessLogBase", "AccessLogCreate", "AccessLogResponse",
-    "Token", "TokenData", "UserLogin", "UserResponse"
+    "CardBase", "CardCreate", "CardUpdate", "CardResponse", "CardListResponse",
+    "ReaderBase", "ReaderCreate", "ReaderUpdate", "ReaderResponse", "ReaderEventRequest", "ReaderEventResponse",
+    "AccessLogResponse", "AccessLogListResponse",
+    "UserLogin", "UserRegister", "UserResponse", "Token", "TokenData",
 ]

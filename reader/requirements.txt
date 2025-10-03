@@ -1,3 +1,4 @@
-httpx==0.27.2
-mfrc522==0.0.7   
-RPi.GPIO==0.7.1  
+httpx==0.26.0
+# Uncomment for hardware RFID support on Raspberry Pi:
+# mfrc522==0.0.7
+# RPi.GPIO==0.7.1

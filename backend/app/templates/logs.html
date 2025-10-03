@@ -1,27 +1,226 @@
 {% extends "base.html" %}
 
+{% block title %}Access Logs - Parking System{% endblock %}
+
 {% block content %}
-<h2>Access Logs</h2>
-<table class="table table-bordered">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Card UID</th>
-            <th>Reader</th>
-            <th>Access Time</th>
-            <th>Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for log in logs %}
-        <tr>
-            <td>{{ log.id }}</td>
-            <td>{{ log.card_uid }}</td>
-            <td>{{ log.reader_id }}</td>
-            <td>{{ log.access_time }}</td>
-            <td>{{ log.status }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<div>
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold">Access Logs</h1>
+        <button onclick="exportCSV()" class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+            Export CSV
+        </button>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                <input type="date" id="start-date" class="border rounded px-3 py-2 w-full">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                <input type="date" id="end-date" class="border rounded px-3 py-2 w-full">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Action</label>
+                <select id="action-filter" class="border rounded px-3 py-2 w-full">
+                    <option value="">All Actions</option>
+                    <option value="enter">Enter</option>
+                    <option value="exit">Exit</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Result</label>
+                <select id="result-filter" class="border rounded px-3 py-2 w-full">
+                    <option value="">All Results</option>
+                    <option value="granted">Granted</option>
+                    <option value="denied">Denied</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-4">
+            <button onclick="filterLogs()" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+                Apply Filters
+            </button>
+            <button onclick="resetFilters()" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded ml-2">
+                Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- Logs Table -->
+    <div class="bg-white rounded-lg shadow">
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Card UID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vehicle</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Location</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Result</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="logs-tbody" class="bg-white divide-y divide-gray-200">
+                    <tr>
+                        <td colspan="8" class="px-6 py-4 text-center text-gray-500">Loading...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="pagination" class="px-6 py-4 flex justify-between items-center border-t"></div>
+    </div>
+</div>
+
+<script>
+    let currentPage = 1;
+    const pageSize = 20;
+
+    async function loadLogs(page = 1) {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const action = document.getElementById('action-filter').value;
+        const result = document.getElementById('result-filter').value;
+        
+        let url = `/logs?page=${page}&page_size=${pageSize}`;
+        if (startDate) url += `&start_date=${startDate}`;
+        if (endDate) url += `&end_date=${endDate}`;
+        if (action) url += `&action=${action}`;
+        if (result) url += `&result=${result}`;
+
+        try {
+            const response = await apiRequest(url);
+            const data = await response.json();
+            
+            const tbody = document.getElementById('logs-tbody');
+            if (data.logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">No logs found</td></tr>';
+            } else {
+                tbody.innerHTML = data.logs.map(log => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${formatDateTime(log.timestamp)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">${log.card_uid || 'N/A'}</td>
+                        <td class="px-6 py-4 text-sm">${log.owner_name || 'N/A'}</td>
+                        <td class="px-6 py-4 text-sm">${log.vehicle_plate || 'N/A'}</td>
+                        <td class="px-6 py-4 text-sm">${log.reader_location || 'N/A'}</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded ${log.action === 'enter' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'}">
+                                ${log.action}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs rounded ${log.result === 'granted' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${log.result}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-sm">${log.reason || '-'}</td>
+                    </tr>
+                `).join('');
+            }
+
+            // Pagination
+            renderPagination(data.page, Math.ceil(data.total / pageSize));
+            currentPage = page;
+        } catch (error) {
+            console.error('Error loading logs:', error);
+            const tbody = document.getElementById('logs-tbody');
+            tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-red-500">Error loading logs</td></tr>';
+        }
+    }
+
+    function formatDateTime(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    }
+
+    function renderPagination(current, total) {
+        const pagination = document.getElementById('pagination');
+        if (total <= 1) {
+            pagination.innerHTML = '<div class="text-sm text-gray-600">Total: ' + ((current - 1) * pageSize + 1) + ' records</div>';
+            return;
+        }
+
+        let html = '<div class="flex gap-2">';
+        if (current > 1) {
+            html += `<button onclick="loadLogs(${current - 1})" class="px-3 py-1 border rounded hover:bg-gray-100">Previous</button>`;
+        }
+        html += `<span class="px-3 py-1">Page ${current} of ${total}</span>`;
+        if (current < total) {
+            html += `<button onclick="loadLogs(${current + 1})" class="px-3 py-1 border rounded hover:bg-gray-100">Next</button>`;
+        }
+        html += '</div>';
+        pagination.innerHTML = html;
+    }
+
+    function filterLogs() {
+        loadLogs(1);
+    }
+
+    function resetFilters() {
+        document.getElementById('start-date').value = '';
+        document.getElementById('end-date').value = '';
+        document.getElementById('action-filter').value = '';
+        document.getElementById('result-filter').value = '';
+        loadLogs(1);
+    }
+
+    async function exportCSV() {
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const result = document.getElementById('result-filter').value;
+        
+        let url = '/logs/export/csv?';
+        const params = [];
+        if (startDate) params.push(`start_date=${startDate}`);
+        if (endDate) params.push(`end_date=${endDate}`);
+        if (result) params.push(`result=${result}`);
+        url += params.join('&');
+
+        try {
+            const token = localStorage.getItem('access_token');
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = `access_logs_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+            } else {
+                alert('Error exporting logs');
+            }
+        } catch (error) {
+            alert('Error: ' + error.message);
+        }
+    }
+
+    // Set default dates to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('start-date').value = today;
+    document.getElementById('end-date').value = today;
+
+    loadLogs();
+    
+    // Auto refresh every 10 seconds
+    setInterval(() => loadLogs(currentPage), 10000);
+</script>
 {% endblock %}

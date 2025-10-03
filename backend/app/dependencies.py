@@ -1,63 +1,45 @@
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from typing import Optional
+from .database import get_db
+from .services.auth import decode_access_token
+from .models import User, UserRole
 
-from app.database import get_db
-from app.models.user import User
-from app.schemas.auth import TokenData
-from app.config import settings
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+security = HTTPBearer()
 
 
-async def get_current_user(
-    token: str = Depends(oauth2_scheme),
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
-    """Get current authenticated user from JWT token"""
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+    """Get current authenticated user"""
+    token = credentials.credentials
+    token_data = decode_access_token(token)
     
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-        token_data = TokenData(username=username)
-    except JWTError:
-        raise credentials_exception
+    if token_data is None or token_data.user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
-    user = db.query(User).filter(User.username == token_data.username).first()
-    if user is None:
-        raise credentials_exception
-    
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
+    user = db.query(User).filter(User.id == token_data.user_id).first()
+    if user is None or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive"
+        )
     
     return user
 
 
-async def get_current_active_user(
+def get_current_superadmin(
     current_user: User = Depends(get_current_user)
 ) -> User:
-    """Get current active user"""
-    if not current_user.is_active:
-        raise HTTPException(status_code=400, detail="Inactive user")
-    return current_user
-
-
-async def get_current_admin_user(
-    current_user: User = Depends(get_current_user)
-) -> User:
-    """Get current admin user"""
-    if not current_user.is_admin:
+    """Require superadmin role"""
+    if current_user.role != UserRole.SUPERADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
+            detail="Insufficient permissions"
         )
     return current_user
