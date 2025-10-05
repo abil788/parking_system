@@ -6,6 +6,9 @@ from .config import get_settings
 from .routers import auth, cards, readers, logs
 from .database import engine, Base
 from .cache import ping as redis_ping
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi import WebSocket, WebSocketDisconnect
+from typing import List
 
 
 settings = get_settings()
@@ -29,11 +32,39 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:8000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Include routers
 app.include_router(auth.router)
 app.include_router(cards.router)
 app.include_router(readers.router)
 app.include_router(logs.router)
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except:
+                pass
+
+manager = ConnectionManager()
 
 # Templates for dashboard
 templates = Jinja2Templates(directory="app/templates")
@@ -85,3 +116,13 @@ def dashboard_logs(request: Request):
     """Dashboard logs page"""
     return templates.TemplateResponse("logs.html", {"request": request})
 
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

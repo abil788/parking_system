@@ -3,6 +3,8 @@ from ..models import Card, Reader, AccessLog, AccessAction, AccessResult
 from ..schemas.reader import ReaderEventResponse
 from ..cache import get_cache, set_cache, delete_cache
 from typing import Tuple
+from typing import Tuple
+import asyncio
 import json
 
 

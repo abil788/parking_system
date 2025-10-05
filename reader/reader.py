@@ -3,7 +3,7 @@ RFID/NFC Reader Script for Raspberry Pi
 Simulates card reading and sends events to backend server
 
 Usage:
-    python reader.py --reader-id=<UUID> --server=http://localhost:8000 --action=enter
+    python reader.py --reader-id=<UUID> --server=http://localhost:5173 --action=enter
 
 For real RFID implementation, install: pip install mfrc522
 """
@@ -155,8 +155,8 @@ def main():
     )
     parser.add_argument(
         "--server",
-        default="http://localhost:8000",
-        help="Backend server URL (default: http://localhost:8000)"
+        default="http://localhost:5173",
+        help="Backend server URL (default: http://localhost:5173)"
     )
     parser.add_argument(
         "--action",
