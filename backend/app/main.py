@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import get_settings
 from .routers import auth, cards, readers, logs
 from .database import engine, Base
+from .cache import ping as redis_ping
+
 
 settings = get_settings()
 
@@ -51,8 +53,13 @@ def root():
 @app.get("/health")
 def health_check():
     """Health check endpoint"""
-    return {"status": "healthy"}
-
+    redis_status = "healthy" if redis_ping() else "unhealthy"
+    
+    return {
+        "status": "healthy",
+        "redis": redis_status,
+        "database": "healthy"  # Could add DB ping too
+    }
 
 # Dashboard routes (simple HTML interface)
 @app.get("/dashboard")
@@ -77,3 +84,4 @@ def dashboard_cards(request: Request):
 def dashboard_logs(request: Request):
     """Dashboard logs page"""
     return templates.TemplateResponse("logs.html", {"request": request})
+

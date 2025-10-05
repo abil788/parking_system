@@ -7,6 +7,7 @@ from ..database import get_db
 from ..models import Card, CardStatus, User
 from ..schemas.card import CardCreate, CardUpdate, CardResponse, CardListResponse
 from ..dependencies import get_current_user
+from ..cache import delete_cache
 
 router = APIRouter(prefix="/cards", tags=["Cards"])
 
@@ -112,6 +113,9 @@ def update_card(
     db.commit()
     db.refresh(card)
     
+    # Invalidate cache
+    delete_cache(f"card:{card.card_uid}")
+    
     return CardResponse.model_validate(card)
 
 
@@ -128,6 +132,9 @@ def delete_card(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Card not found"
         )
+    
+    # Invalidate cache before delete
+    delete_cache(f"card:{card.card_uid}")
     
     db.delete(card)
     db.commit()
