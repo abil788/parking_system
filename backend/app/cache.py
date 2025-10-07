@@ -6,18 +6,21 @@ from .config import get_settings
 
 settings = get_settings()
 
-# Redis connection pool
-redis_client = redis.Redis(
-    host=settings.REDIS_HOST,
-    port=settings.REDIS_PORT,
-    db=settings.REDIS_DB,
-    password=settings.REDIS_PASSWORD if settings.REDIS_PASSWORD else None,
-    decode_responses=True,
-    socket_connect_timeout=5,
-    socket_timeout=5,
-    retry_on_timeout=True
-)
-
+# 🔧 Buat koneksi Redis
+try:
+    redis_client = redis.Redis(
+        host=settings.REDIS_HOST or "localhost",
+        port=settings.REDIS_PORT or 6379,
+        db=settings.REDIS_DB or 0,
+        password=settings.REDIS_PASSWORD if settings.REDIS_PASSWORD else None,
+        decode_responses=True,
+        socket_connect_timeout=5,
+        socket_timeout=5,
+        retry_on_timeout=True
+    )
+except Exception as e:
+    print(f"[Redis Init Error] Gagal membuat koneksi ke Redis: {e}")
+    redis_client = None
 
 def get_cache(key: str) -> Optional[Any]:
     """Get value from cache"""

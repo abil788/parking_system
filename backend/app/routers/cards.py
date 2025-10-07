@@ -19,7 +19,8 @@ def list_cards(
     search: Optional[str] = None,
     status: Optional[CardStatus] = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # TEMPORARY: Disabled untuk testing
+    # current_user: User = Depends(get_current_user)
 ):
     """List all cards with pagination and filtering"""
     query = db.query(Card)
@@ -55,7 +56,8 @@ def list_cards(
 def create_card(
     card_data: CardCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # TEMPORARY: Disabled untuk testing
+    # current_user: User = Depends(get_current_user)
 ):
     """Create a new card"""
     # Check if card_uid already exists
@@ -78,7 +80,8 @@ def create_card(
 def get_card(
     card_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # TEMPORARY: Disabled untuk testing
+    # current_user: User = Depends(get_current_user)
 ):
     """Get a specific card by ID"""
     card = db.query(Card).filter(Card.id == card_id).first()
@@ -95,7 +98,8 @@ def update_card(
     card_id: UUID,
     card_data: CardUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # TEMPORARY: Disabled untuk testing
+    # current_user: User = Depends(get_current_user)
 ):
     """Update a card"""
     card = db.query(Card).filter(Card.id == card_id).first()
@@ -123,7 +127,8 @@ def update_card(
 def delete_card(
     card_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    # TEMPORARY: Disabled untuk testing
+    # current_user: User = Depends(get_current_user)
 ):
     """Delete a card"""
     card = db.query(Card).filter(Card.id == card_id).first()
